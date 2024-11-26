@@ -1,293 +1,308 @@
 ﻿using CharacterClassification;
-using Microsoft.Extensions.Logging;
+using CharacterClassificationLibrary;
+using System.ComponentModel;
 
-namespace CharacterClassificationLibrary
+public class MLPerceptronNetwork : INotifyPropertyChanged, INeuralNetwork
 {
-    public class MLPerceptronNetwork : INeuralNetwork
+    public int[,] TrainingInputs { get; private set; }
+    public int[,] TrainingTargets { get; private set; }
+    public int[,] ValidationInputs { get; private set; }
+    public int[,] ValidationTargets { get; private set; }
+    public double[][,] LinkWeights { get; private set; }
+    public Neuron[][] Neurons { get; private set; }
+    public double[][,] WeightAdjustmentParameters { get; private set; }
+    public double[][] DeltaFactors { get; private set; }
+    public double LearningRate { get; private set; }
+    public double LastMSE { get; private set; }
+    public int MaxEpoch { get; private set; } = 1000;
+    public int MaxValidationChecks { get; private set; } = 6;
+    private int epoch;
+    private int validationChecks;
+    public int Epoch
     {
-        public int[,] Dataset { get; set; }
-        public int[,] ValidationData { get; set; }
-        public Neuron[][] Neurons { get; set; }
-        public Edge[][,] Edges { get; set; }
-        public double[][,] WeightAdjustmentParameters { get; set; }
-        public double[][] DeltaFactors { get; set; }
-        public double LearningRate { get; set; }
-        public int Epoch { get; set; }
-        public double LastValidationResult { get; set; } = double.PositiveInfinity;
-
-        public MLPerceptronNetwork(int[,] dataset, double learningRate, int layerCount, int[,] validationData)
+        get { return epoch; }
+        set
         {
-            Dataset = dataset;
-            LearningRate = learningRate;
-            ValidationData = validationData;
-            Epoch = 1;
+            epoch = value;
+            PropertyChangedEventArgs args = new PropertyChangedEventArgs(nameof(Epoch));
+            PropertyChanged?.Invoke(this, args);
+        }
+    }
+    public int ValidationChecks
+    {
+        get { return validationChecks; }
+        set
+        {
+            validationChecks = value;
+            PropertyChangedEventArgs args = new PropertyChangedEventArgs(nameof(ValidationChecks));
+            PropertyChanged?.Invoke(this, args);
+        }
+    }
+    public MLPerceptronNetwork(int[,] trainingInputs, int[,] validationInputs, int layerCount, double learningRate, int numOfHiddenNeuronsPerLayer)
+    {
+        LearningRate = learningRate;
+        TrainingInputs = Utils.ExtractInputs(trainingInputs);
+        ValidationInputs = Utils.ExtractInputs(validationInputs);
+        TrainingTargets = Utils.ExtractTargets(trainingInputs);
+        ValidationTargets = Utils.ExtractTargets(validationInputs);
+        Epoch = 0;
 
-            int dataLength = dataset.GetLength(1);
-            Neurons = new Neuron[layerCount + 1][];
-            Edges = new Edge[layerCount][,];
-            WeightAdjustmentParameters = new double[layerCount][,];
-            DeltaFactors = new double[layerCount + 1][];
+        LinkWeights = new double[layerCount][,];
+        WeightAdjustmentParameters = new double[layerCount][,];
+        Neurons = new Neuron[layerCount + 1][];
+        DeltaFactors = new double[layerCount + 1][];
 
-            // initialize neurons
-            for (int i = 0; i < layerCount + 1; i++)
+        // initialize neurons
+        for (int i = 0; i < layerCount + 1; i++)
+        {
+            if (i == 0)
             {
-                if (i == 0)
+                Neuron[] inputNeurons = new Neuron[TrainingInputs.GetLength(1)];
+                for (int j = 0; j < inputNeurons.Length; j++)
                 {
-                    Neuron[] inputNeurons = new Neuron[dataLength];
-                    for (int j = 0; j < inputNeurons.Length; j++)
-                    {
-                        Neuron newNeuron = new Neuron();
-                        inputNeurons[j] = newNeuron;
+                    Neuron newNeuron = new();
+                    inputNeurons[j] = newNeuron;
 
-                    }
-                    inputNeurons[inputNeurons.Length - 1].ActivityLevel = 1;
-                    Neurons[i] = inputNeurons;
                 }
-                else if (i == layerCount)
-                {
-                    Neuron[] outputNeurons = new Neuron[2];
-                    for (int j = 0; j < outputNeurons.Length; j++)
-                    {
-                        Neuron newNeuron = new Neuron();
-                        outputNeurons[j] = newNeuron;
-
-                    }
-                    Neurons[i] = outputNeurons;
-                }
-                else
-                {
-                    Neuron[] hiddenLayerNeurons = new Neuron[(int)(2.0 / 3 * Neurons[0].Length) + 2]; // + 2 is the number of outputs
-                    for (int j = 0; j < hiddenLayerNeurons.Length; j++)
-                    {
-                        Neuron newNeuron = new Neuron();
-                        hiddenLayerNeurons[j] = newNeuron;
-                    }
-                    hiddenLayerNeurons[hiddenLayerNeurons.Length - 1].ActivityLevel = 1;
-                    Neurons[i] = hiddenLayerNeurons;
-                }
-                DeltaFactors[i] = new double[Neurons[i].Length];
+                inputNeurons[inputNeurons.Length - 1].ActivityLevel = 1;
+                Neurons[0] = inputNeurons;
             }
-
-            //initialize edges
-            for (int i = 0; i < layerCount; i++)
+            else if (i == layerCount)
             {
-                Edge[,] currentLayerEdges = new Edge[Neurons[i].Length, Neurons[i + 1].Length];
-                WeightAdjustmentParameters[i] = new double[Neurons[i].Length, Neurons[i + 1].Length];
-
-                for (int j = 0; j < Neurons[i].Length; j++)
+                Neuron[] outputNeurons = new Neuron[TrainingTargets.GetLength(1)];
+                for (int j = 0; j < outputNeurons.Length; j++)
                 {
-                    for (int k = 0; k < Neurons[i + 1].Length; k++)
-                    {
-                        currentLayerEdges[j, k] = new Edge(Neurons[i][j], Neurons[i][k]);
-                    }
+                    Neuron newNeuron = new();
+                    outputNeurons[j] = newNeuron;
+
                 }
-                Edges[i] = currentLayerEdges;
+                Neurons[layerCount] = outputNeurons;
+            }
+            else
+            {
+                Neuron[] hiddenLayerNeurons = new Neuron[numOfHiddenNeuronsPerLayer];
+                for (int j = 0; j < hiddenLayerNeurons.Length; j++)
+                {
+                    Neuron newNeuron = new();
+                    hiddenLayerNeurons[j] = newNeuron;
+                }
+                hiddenLayerNeurons[hiddenLayerNeurons.Length - 1].ActivityLevel = 1;
+                Neurons[i] = hiddenLayerNeurons;
+            }
+            DeltaFactors[i] = new double[Neurons[i].Length];
+        }
+
+        //initialize links
+        for (int i = 0; i < layerCount; i++)
+        {
+            double[,] currentLayerWeights = new double[Neurons[i].Length, Neurons[i + 1].Length];
+            WeightAdjustmentParameters[i] = new double[Neurons[i].Length, Neurons[i + 1].Length];
+
+            for (int j = 0; j < Neurons[i].Length; j++)
+            {
+                for (int k = 0; k < Neurons[i + 1].Length; k++)
+                {
+                    currentLayerWeights[j, k] = 0;
+                }
+            }
+            LinkWeights[i] = currentLayerWeights;
+        }
+    }
+
+
+
+    public void Train()
+    {
+        Random rnd = new Random();
+
+        // populate link weights
+        for (int i = 0; i < LinkWeights.Length; i++)
+        {
+            for (int j = 0; j < Neurons[i].Length; j++)
+            {
+                for (int k = 0; k < Neurons[i + 1].Length; k++)
+                {
+                    LinkWeights[i][j, k] = rnd.NextDouble() - 0.5;
+                }
             }
         }
 
-        public void Train()
+        bool shouldStop = false;
+        while (!shouldStop)
         {
-            Random rnd = new Random();
-
-            // populate edges
-            for (int i = 0; i < Edges.Length; i++)
+            Epoch++;
+            for (int i = 0; i < TrainingInputs.GetLength(0); i++)
             {
-                for (int j = 0; j < Neurons[i].Length; j++)
+                double[] currentRow = new double[TrainingInputs.GetLength(1)];
+                for (int j = 0; j < TrainingInputs.GetLength(1); j++)
                 {
-                    for (int k = 0; k < Neurons[i + 1].Length; k++)
-                    {
-                        Edges[i][j, k].Weight = rnd.NextDouble() - 0.5;
-                    }
+                    currentRow[j] = TrainingInputs[i, j];
                 }
-            }
 
-            bool shouldStop = false;
-            while (!shouldStop)
+                FeedForward(currentRow);
+
+                int[] targets = new int[TrainingTargets.GetLength(1)];
+                for (int j = 0; j < targets.Length; j++)
+                {
+                    targets[j] = TrainingTargets[i, j];
+                }
+
+                BackPropagate(targets);
+            }
+            shouldStop = CheckStopCondition();
+        }
+    }
+    private bool CheckStopCondition()
+    {
+        double minError = 1.0e-3;
+        double meanSquareError = 0;
+
+        for (int i = 0; i < ValidationInputs.GetLength(0); i++)
+        {
+            double[] currentRow = new double[ValidationInputs.GetLength(1)];
+            for (int j = 0; j < currentRow.Length; j++)
             {
-                for (int i = 0; i < Dataset.GetLength(0); i++)
-                {
-                    int[] currentRow = new int[Dataset.GetLength(1)];
-                    for (int j = 0; j < Dataset.GetLength(1); j++)
-                    {
-                        currentRow[j] = Dataset[i, j];
-                    }
-
-                    FeedForward(currentRow);
-
-                    int[] targets = new int[Neurons[Neurons.Length - 1].Length];
-                    targets[0] = Dataset[i, Dataset.GetLength(1) - 1];
-                    targets[1] = -targets[0];
-
-                    BackPropagate(targets);
-                }
-                shouldStop = CheckStopCondition();
-                Epoch++;
+                currentRow[j] = ValidationInputs[i, j];
             }
+            FeedForward(currentRow);
+
+            double averageSquaredError = 0;
+            for (int k = 0; k < ValidationTargets.GetLength(1); k++)
+            {
+                double predictedValue = Neurons[Neurons.Length - 1][k].ActivityLevel;
+                averageSquaredError += Math.Pow(ValidationTargets[i, k] - predictedValue, 2);
+            }
+            averageSquaredError /= ValidationTargets.GetLength(1);
+            meanSquareError += averageSquaredError;
+        }
+        meanSquareError /= ValidationTargets.GetLength(0);
+
+        if (Epoch == MaxEpoch || ValidationChecks == MaxValidationChecks || meanSquareError <= minError)
+        {
+            return true;
+        }
+        if (meanSquareError > LastMSE)
+        {
+            ValidationChecks++;
+        }
+        LastMSE = meanSquareError;
+        return false;
+
+    }
+    private void FeedForward(double[] currentRow)
+    {
+        // populate input neurons
+        for (int i = 0; i < Neurons[0].Length - 1; i++)
+        {
+            Neurons[0][i].ActivityLevel = currentRow[i];
         }
 
-        private bool CheckStopCondition()
+        // calculate net input and activity level for each hidden layer neuron
+        for (int i = 1; i < Neurons.Length - 1; i++)
         {
-            int maxEpochs = 100;
-            int validationInterval = maxEpochs / ValidationData.GetLength(0);
-            bool shouldValidate = Epoch % validationInterval == 0;
-            int validationIndex = Epoch / validationInterval - 1;
-
-            if (Epoch > maxEpochs)
-            {
-                return true;
-            }
-
-            if (shouldValidate)
-            {
-                int[] currentRow = new int[ValidationData.GetLength(1)];
-                for (int i = 0; i < ValidationData.GetLength(1); i++)
-                {
-                    currentRow[i] = ValidationData[validationIndex, i];
-                }
-                double classificationResult = Classify(currentRow);
-                double target = currentRow[currentRow.Length - 1];
-
-                double errorRate = Math.Abs(target - classificationResult);
-
-                if (LastValidationResult < errorRate)
-                {
-                    return true;
-                }
-                LastValidationResult = errorRate;
-            }
-            return false;
-        }
-        private void BackPropagate(int[] targets)
-        {
-            int outputLayerIndex = Neurons.Length - 1;
-            for (int i = 0; i < Neurons[outputLayerIndex].Length; i++)
-            {
-                double target = targets[i];
-                if (i == 1) target = -target;
-                Neuron currentNeuron = Neurons[outputLayerIndex][i];
-                double errorRate = target - currentNeuron.ActivityLevel;
-
-                double deltaFactor = errorRate * TransferFunctionDerivative(currentNeuron.NetInput);
-                DeltaFactors[outputLayerIndex][i] = deltaFactor;
-
-                for (int j = 0; j < Neurons[outputLayerIndex - 1].Length; j++)
-                {
-                    double weightAdjustmentParameter = LearningRate * DeltaFactors[outputLayerIndex][i] * Neurons[outputLayerIndex - 1][j].ActivityLevel;
-
-                    WeightAdjustmentParameters[outputLayerIndex - 1][j, i] = weightAdjustmentParameter;
-                }
-            }
-
-            for (int i = outputLayerIndex - 1; i > 0; i--)
-            {
-                for (int j = 0; j < Neurons[i].Length; j++)
-                {
-                    double weightedInputDeltaSum = 0;
-                    for (int k = 0; k < Neurons[i + 1].Length; k++)
-                    {
-                        weightedInputDeltaSum += DeltaFactors[i + 1][k] * Edges[i][j, k].Weight;
-                    }
-                    DeltaFactors[i][j] = weightedInputDeltaSum * TransferFunctionDerivative(Neurons[i][j].NetInput);
-
-                    for (int k = 0; k < Neurons[i - 1].Length; k++)
-                    {
-                        double weightAdjustmentParameter = LearningRate * DeltaFactors[i][j] * Neurons[i - 1][k].ActivityLevel;
-                        WeightAdjustmentParameters[i - 1][k, j] = weightAdjustmentParameter;
-                    }
-                }
-            }
-
-            for (int i = outputLayerIndex - 1; i > 0; i--)
-            {
-                for (int j = 0; j < Neurons[i].Length; j++)
-                {
-                    for (int k = 0; k < Neurons[i + 1].Length; k++)
-                    {
-                        Edges[i][j, k].Weight += WeightAdjustmentParameters[i][j, k];
-                    }
-                }
-            }
-        }
-        private void FeedForward(int[] currentRow)
-        {
-            // populate input neurons
-            for (int i = 0; i < Neurons[0].Length - 1; i++)
-            {
-                Neurons[0][i].ActivityLevel = currentRow[i];
-            }
-
-            // calculate net input and activity level for each hidden layer neuron
-            for (int i = 1; i < Neurons.Length - 1; i++)
-            {
-                for (int j = 0; j < Neurons[i].Length; j++)
-                {
-                    double netInput = 0;
-                    for (int k = 0; k < Neurons[i - 1].Length; k++)
-                    {
-                        netInput += Neurons[i - 1][k].ActivityLevel * Edges[i - 1][k, j].Weight;
-                    }
-                    Neurons[i][j].NetInput = netInput;
-                    if (j != Neurons[i].Length - 1)
-                    {
-                        Neurons[i][j].ActivityLevel = TransferFunction(netInput);
-                    }
-                }
-            }
-
-            // calculate net input and activity level for output neurons
-            for (int i = 0; i < Neurons[Neurons.Length - 1].Length; i++)
+            for (int j = 0; j < Neurons[i].Length; j++)
             {
                 double netInput = 0;
-                for (int j = 0; j < Neurons[Neurons.Length - 2].Length; j++)
+                for (int k = 0; k < Neurons[i - 1].Length; k++)
                 {
-                    netInput += Neurons[Neurons.Length - 2][j].ActivityLevel * Edges[Edges.Length - 1][j, i].Weight;
+                    netInput += Neurons[i - 1][k].ActivityLevel * LinkWeights[i - 1][k, j];
                 }
-                Neurons[Neurons.Length - 1][i].NetInput = netInput;
-                Neurons[Neurons.Length - 1][i].ActivityLevel = TransferFunction(netInput);
-            }
-        }
-        private double TransferFunction(double netInput)
-        {
-            return (2 / (1 + Math.Pow(Math.E, -netInput))) - 1;
-        }
-        private double TransferFunctionDerivative(double netInput)
-        {
-            return 1.0 / 2 * (1 + TransferFunction(netInput) * (1 - TransferFunction(netInput)));
-        }
-        public double Classify(int[] input)
-        {
-            for (int i = 0; i < input.Length; i++)
-            {
-                Neurons[0][i].ActivityLevel = input[i];
-            }
-
-            for (int i = 1; i < Neurons.Length - 1; i++)
-            {
-                for (int j = 0; j < Neurons[i].Length - 1; j++)
+                Neurons[i][j].NetInput = netInput;
+                if (j != Neurons[i].Length - 1)
                 {
-                    double netInput = 0;
-                    for (int k = 0; k < Neurons[i - 1].Length; k++)
-                    {
-                        netInput += Neurons[i - 1][k].ActivityLevel * Edges[i - 1][k, j].Weight;
-                    }
-                    Neurons[i][j].NetInput = netInput;
                     Neurons[i][j].ActivityLevel = TransferFunction(netInput);
                 }
             }
+        }
 
-            for (int i = 0; i < Neurons[Neurons.Length - 1].Length; i++)
+        // calculate net input and activity level for output neurons
+        for (int i = 0; i < Neurons[Neurons.Length - 1].Length; i++)
+        {
+            double netInput = 0;
+            for (int j = 0; j < Neurons[Neurons.Length - 2].Length; j++)
             {
-                double netInput = 0;
-                for (int j = 0; j < Neurons[Neurons.Length - 2].Length; j++)
-                {
-                    netInput += Neurons[Neurons.Length - 2][j].ActivityLevel * Edges[Edges.Length - 1][j, i].Weight;
-                }
-                Neurons[Neurons.Length - 1][i].NetInput = netInput;
-                Neurons[Neurons.Length - 1][i].ActivityLevel = TransferFunction(netInput);
+                netInput += Neurons[Neurons.Length - 2][j].ActivityLevel * LinkWeights[LinkWeights.Length - 1][j, i];
             }
-
-            return Neurons[Neurons.Length - 1][0].ActivityLevel;
+            Neurons[Neurons.Length - 1][i].NetInput = netInput;
+            Neurons[Neurons.Length - 1][i].ActivityLevel = TransferFunction(netInput);
         }
     }
-}
+    private void BackPropagate(int[] targets)
+    {
+        int outputLayerIndex = Neurons.Length - 1;
+        for (int i = 0; i < Neurons[outputLayerIndex].Length; i++)
+        {
+            double target = targets[i];
+            Neuron currentNeuron = Neurons[outputLayerIndex][i];
+            double errorRate = target - currentNeuron.ActivityLevel;
 
+            double deltaFactor = errorRate * TransferFunctionDerivative(currentNeuron.NetInput);
+            DeltaFactors[outputLayerIndex][i] = deltaFactor;
+
+            for (int j = 0; j < Neurons[outputLayerIndex - 1].Length; j++)
+            {
+                double weightAdjustmentParameter = LearningRate * DeltaFactors[outputLayerIndex][i] * Neurons[outputLayerIndex - 1][j].ActivityLevel;
+
+                WeightAdjustmentParameters[outputLayerIndex - 1][j, i] = weightAdjustmentParameter;
+            }
+        }
+
+        for (int i = outputLayerIndex - 1; i > 0; i--)
+        {
+            for (int j = 0; j < Neurons[i].Length; j++)
+            {
+                double weightedInputDeltaSum = 0;
+                for (int k = 0; k < Neurons[i + 1].Length; k++)
+                {
+                    weightedInputDeltaSum += DeltaFactors[i + 1][k] * LinkWeights[i][j, k];
+                }
+                DeltaFactors[i][j] = weightedInputDeltaSum * TransferFunctionDerivative(Neurons[i][j].NetInput);
+
+                for (int k = 0; k < Neurons[i - 1].Length; k++)
+                {
+                    double weightAdjustmentParameter = LearningRate * DeltaFactors[i][j] * Neurons[i - 1][k].ActivityLevel;
+                    WeightAdjustmentParameters[i - 1][k, j] = weightAdjustmentParameter;
+                }
+            }
+        }
+
+        for (int i = LinkWeights.Length - 1; i >= 0; i--)
+        {
+            for (int j = 0; j < Neurons[i].Length; j++)
+            {
+                for (int k = 0; k < Neurons[i + 1].Length; k++)
+                {
+                    LinkWeights[i][j, k] += WeightAdjustmentParameters[i][j, k];
+                }
+            }
+        }
+    }
+    public double Classify(int[] inputs)
+    {
+        double[] output = new double[2];
+
+        double[] testInputs = new double[inputs.Length];
+        for (int i = 0; i < testInputs.Length; i++)
+        {
+            testInputs[i] = Convert.ToDouble(inputs[i]);
+        }
+        FeedForward(testInputs);
+
+        for (int i = 0; i < Neurons[Neurons.Length - 1].Length; i++)
+        {
+            output[i] = (Neurons[Neurons.Length - 1][i].ActivityLevel);
+        }
+
+        return output[0] >= output[1] ? 1 : -1;
+    }
+
+    private static double TransferFunction(double netInput)
+    {
+        return (2 / (1 + Math.Pow(Math.E, -netInput))) - 1;
+    }
+    private static double TransferFunctionDerivative(double netInput)
+    {
+        return 0.5 * (1 + TransferFunction(netInput) * (1 - TransferFunction(netInput)));
+    }
+    public event PropertyChangedEventHandler? PropertyChanged;
+}

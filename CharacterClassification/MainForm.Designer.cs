@@ -241,7 +241,7 @@
             // 
             AutoScaleDimensions = new SizeF(12F, 30F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1055, 643);
+            ClientSize = new Size(1010, 643);
             Controls.Add(label1);
             Controls.Add(ConfusionMatrix);
             Controls.Add(ClassifyButton);

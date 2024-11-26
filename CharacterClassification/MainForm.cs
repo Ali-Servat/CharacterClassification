@@ -102,7 +102,7 @@ namespace CharacterDatasetGenerator
                 case NeuralNetworkType.AdalineNetwork:
                     return new AdalineNetwork(dataset);
                 case NeuralNetworkType.MLPerceptronNetwork:
-                    return new MLPerceptronNetwork2(dataset, validationDataset, 2, 0.001, 10);
+                    return new MLPerceptronNetwork(dataset, validationDataset, 2, 0.001, 10);
                 case NeuralNetworkType.ConvNet:
                     return new ConvNet(dataset);
                 default:
