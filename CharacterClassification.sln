@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34701.34
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CharacterClassification", "CharacterClassification\CharacterClassification.csproj", "{3081BF22-6FE0-430C-8312-EC005C7E37F8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CharacterClassification", "CharacterClassification\CharacterClassification.csproj", "{3081BF22-6FE0-430C-8312-EC005C7E37F8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CharacterClassificationLibrary", "CharacterClassificationLibrary\CharacterClassificationLibrary.csproj", "{0513D5A5-B015-479E-8A77-794B99525572}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CharacterClassificationLibrary", "CharacterClassificationLibrary\CharacterClassificationLibrary.csproj", "{0513D5A5-B015-479E-8A77-794B99525572}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
