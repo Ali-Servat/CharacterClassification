@@ -119,11 +119,13 @@ namespace CharacterDatasetGenerator
         }
         private int[,] ImportData(string path)
         {
+            var dataPath = "Data/";
+            var fullPath = dataPath + path;
             int[,] output;
-            using (StreamReader sr = new StreamReader(path))
+            using (StreamReader sr = new StreamReader(fullPath))
             {
-                int lineCount = GetLineCount(path);
-                int dataLength = GetDataLength(path);
+                int lineCount = GetLineCount(fullPath);
+                int dataLength = GetDataLength(fullPath);
                 output = new int[lineCount, dataLength];
 
                 string? currentLine = sr.ReadLine();
