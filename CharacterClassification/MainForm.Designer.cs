@@ -46,6 +46,14 @@
             X = new DataGridViewTextBoxColumn();
             O = new DataGridViewTextBoxColumn();
             label1 = new Label();
+            label2 = new Label();
+            MacroPrecisionValue = new Label();
+            MacroRecallValue = new Label();
+            label5 = new Label();
+            MacroAccuracyValue = new Label();
+            label7 = new Label();
+            MacroF1ScoreValue = new Label();
+            label9 = new Label();
             ((System.ComponentModel.ISupportInitialize)ConfusionMatrix).BeginInit();
             SuspendLayout();
             // 
@@ -237,11 +245,99 @@
             label1.TabIndex = 111;
             label1.Text = "Confusion Matrix:";
             // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Font = new Font("Segoe UI", 12F);
+            label2.Location = new Point(480, 436);
+            label2.Name = "label2";
+            label2.Size = new Size(124, 21);
+            label2.TabIndex = 112;
+            label2.Text = "Macro Precision:";
+            // 
+            // MacroPrecisionValue
+            // 
+            MacroPrecisionValue.AutoSize = true;
+            MacroPrecisionValue.Font = new Font("Segoe UI", 12F);
+            MacroPrecisionValue.Location = new Point(610, 436);
+            MacroPrecisionValue.Name = "MacroPrecisionValue";
+            MacroPrecisionValue.Size = new Size(19, 21);
+            MacroPrecisionValue.TabIndex = 113;
+            MacroPrecisionValue.Text = "0";
+            // 
+            // MacroRecallValue
+            // 
+            MacroRecallValue.AutoSize = true;
+            MacroRecallValue.Font = new Font("Segoe UI", 12F);
+            MacroRecallValue.Location = new Point(610, 473);
+            MacroRecallValue.Name = "MacroRecallValue";
+            MacroRecallValue.Size = new Size(19, 21);
+            MacroRecallValue.TabIndex = 115;
+            MacroRecallValue.Text = "0";
+            // 
+            // label5
+            // 
+            label5.AutoSize = true;
+            label5.Font = new Font("Segoe UI", 12F);
+            label5.Location = new Point(480, 473);
+            label5.Name = "label5";
+            label5.Size = new Size(102, 21);
+            label5.TabIndex = 114;
+            label5.Text = "Macro Recall:";
+            // 
+            // MacroAccuracyValue
+            // 
+            MacroAccuracyValue.AutoSize = true;
+            MacroAccuracyValue.Font = new Font("Segoe UI", 12F);
+            MacroAccuracyValue.Location = new Point(610, 508);
+            MacroAccuracyValue.Name = "MacroAccuracyValue";
+            MacroAccuracyValue.Size = new Size(19, 21);
+            MacroAccuracyValue.TabIndex = 117;
+            MacroAccuracyValue.Text = "0";
+            // 
+            // label7
+            // 
+            label7.AutoSize = true;
+            label7.Font = new Font("Segoe UI", 12F);
+            label7.Location = new Point(480, 508);
+            label7.Name = "label7";
+            label7.Size = new Size(123, 21);
+            label7.TabIndex = 116;
+            label7.Text = "Macro Accuracy:";
+            // 
+            // MacroF1ScoreValue
+            // 
+            MacroF1ScoreValue.AutoSize = true;
+            MacroF1ScoreValue.Font = new Font("Segoe UI", 12F);
+            MacroF1ScoreValue.Location = new Point(610, 541);
+            MacroF1ScoreValue.Name = "MacroF1ScoreValue";
+            MacroF1ScoreValue.Size = new Size(19, 21);
+            MacroF1ScoreValue.TabIndex = 119;
+            MacroF1ScoreValue.Text = "0";
+            // 
+            // label9
+            // 
+            label9.AutoSize = true;
+            label9.Font = new Font("Segoe UI", 12F);
+            label9.Location = new Point(480, 541);
+            label9.Name = "label9";
+            label9.Size = new Size(121, 21);
+            label9.TabIndex = 118;
+            label9.Text = "Macro F1 Score:";
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(12F, 30F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1010, 643);
+            Controls.Add(MacroF1ScoreValue);
+            Controls.Add(label9);
+            Controls.Add(MacroAccuracyValue);
+            Controls.Add(label7);
+            Controls.Add(MacroRecallValue);
+            Controls.Add(label5);
+            Controls.Add(MacroPrecisionValue);
+            Controls.Add(label2);
             Controls.Add(label1);
             Controls.Add(ConfusionMatrix);
             Controls.Add(ClassifyButton);
@@ -286,5 +382,13 @@
         private DataGridViewTextBoxColumn X;
         private DataGridViewTextBoxColumn O;
         private Label label1;
+        private Label label2;
+        private Label MacroPrecisionValue;
+        private Label MacroRecallValue;
+        private Label label5;
+        private Label MacroAccuracyValue;
+        private Label label7;
+        private Label MacroF1ScoreValue;
+        private Label label9;
     }
 }

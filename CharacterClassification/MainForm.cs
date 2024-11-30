@@ -26,12 +26,46 @@ namespace CharacterDatasetGenerator
         private void TrainButton_Click(object sender, MouseEventArgs e)
         {
             int[,] dataset = ImportData("Dataset.txt");
-            int[,] validationData = ImportData("ValidationData.txt");
-            int[,] testData = ImportData("TestData.txt");
+            ShuffleRows(dataset);
+
+            int totalSamplesCount = dataset.GetLength(0);
+            int columnsCount = dataset.GetLength(1);
+
+            int validationDataSize = (int)(0.1 * totalSamplesCount);
+            int testDataSize = (int)(0.3 * totalSamplesCount);
+            int trainingDataSize = totalSamplesCount - validationDataSize - testDataSize;
+
+            int[,] trainingData = new int[trainingDataSize, columnsCount];
+            int[,] validationData = new int[validationDataSize, columnsCount];
+            int[,] testData = new int[testDataSize, columnsCount];
+
+            for (int i = 0; i < validationDataSize; i++)
+            {
+                for (int j = 0; j < columnsCount; j++)
+                {
+                    validationData[i, j] = dataset[i, j];
+                }
+            }
+
+            for (int i = 0; i < testDataSize; i++)
+            {
+                for (int j = 0; j < columnsCount; j++)
+                {
+                    testData[i, j] = dataset[validationDataSize + i, j];
+                }
+            }
+
+            for (int i = 0; i < trainingDataSize; i++)
+            {
+                for (int j = 0; j < columnsCount; j++)
+                {
+                    trainingData[i, j] = dataset[validationDataSize + testDataSize + i, j];
+                }
+            }
 
             NeuralNetworkType selectedNeuralNetwork = (NeuralNetworkType)Enum.Parse(typeof(NeuralNetworkType), NetworkComboBox.Text);
 
-            NeuralNetwork = ChooseNeuralNetwork(selectedNeuralNetwork, dataset, validationData);
+            NeuralNetwork = ChooseNeuralNetwork(selectedNeuralNetwork, trainingData, validationData);
             NeuralNetwork.Train();
 
             int[] classificationResults = new int[testData.GetLength(0)];
@@ -63,7 +97,29 @@ namespace CharacterDatasetGenerator
             UpdateConfusionMatrix(confusionMatrix);
             var evaluation = Evaluate(confusionMatrix);
             EvaluationTable.UpdateTable(evaluation);
+            UpdateMacroScores(evaluation);
         }
+
+        private void UpdateMacroScores(double[,] evaluation)
+        {
+            double[] macroScores = new double[evaluation.GetLength(1)];
+            for (int i = 0; i < evaluation.GetLength(1); i++)
+            {
+                double average = 0;
+                for (int j = 0; j < evaluation.GetLength(0); j++)
+                {
+                    average += evaluation[j, i];
+                }
+                average /= 2;
+                macroScores[i] = average;
+            }
+
+            MacroPrecisionValue.Text = (macroScores[0] * 100).ToString("F2") + " %";
+            MacroRecallValue.Text = (macroScores[1] * 100).ToString("F2") + " %";
+            MacroAccuracyValue.Text = (macroScores[2] * 100).ToString("F2") + " %";
+            MacroF1ScoreValue.Text = (macroScores[3] * 100).ToString("F2") + " %";
+        }
+
         private void radioButton1_CheckedChanged(object sender, EventArgs e)
         {
 
@@ -289,6 +345,24 @@ namespace CharacterDatasetGenerator
                 output[i, 3] = (output[i, 0] + output[i, 1] == 0) ? 0 : (2 * output[i, 0] * output[i, 1]) / (output[i, 0] + output[i, 1]);
             }
             return output;
+        }
+        static void ShuffleRows<T>(T[,] array)
+        {
+            Random rng = new Random();
+            int rowCount = array.GetLength(0);
+            int colCount = array.GetLength(1);
+
+            for (int i = rowCount - 1; i > 0; i--)
+            {
+                int j = rng.Next(0, i + 1);
+
+                for (int k = 0; k < colCount; k++)
+                {
+                    T temp = array[i, k];
+                    array[i, k] = array[j, k];
+                    array[j, k] = temp;
+                }
+            }
         }
     }
 }
